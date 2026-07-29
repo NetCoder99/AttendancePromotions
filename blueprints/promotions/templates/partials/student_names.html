@@ -1,0 +1,4 @@
+<label>Found students</label>
+{% for student in student_list %}
+    <option value="{{ student.badgeNumber }} : {{ student.firstName }} {{ student.lastName }}"></option>
+{% endfor %}

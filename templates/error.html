@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}
+Login
+{% endblock %}
+
+{% block content %}
+
+<div class="container d-flex align-items-center justify-content-center flex-column" style="margin-top: 1rem;">
+    <div class="alert alert-danger text-center w-75" role="alert">
+        <h4 class="text-dark">Primary error:</h4>
+        <p class="">{{message}}</p>
+    </div>
+    <br>
+    {% if original_message is defined %}
+        <div class="alert alert-danger text-center w-75" role="alert">
+            <h4 class="text-dark">Original error:</h4>
+            <p class="">{{original_message}}</p>
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

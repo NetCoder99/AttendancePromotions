@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="icon" href="data:,">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="static/bootstrap-5.3.8-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/datatables.min.css">
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="static/jquery-ui-1.14.1/jquery-ui.min.css">
+
+    <script type="application/javascript" src="static/jquery-3.7.1.min.js"></script>
+    <script type="application/javascript" src="static/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
+    <script type="application/javascript" src="static/scripts/datatables.min.js"></script>
+    <script type="application/javascript" src="static/jquery-ui-1.14.1/jquery-ui.min.js"></script>
+    <script type="application/javascript" src="static/scripts/htmx.min.js"></script>
+
+    <title>{% block title %} {% endblock %}</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-md navbar-light bg-light sticky-top">
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+            <ul class="navbar-nav w-50 justify-content-evenly">
+                <li class="nav-item">
+                    <a class="nav-link fw-bold fs-5" href="/promotions">Promotions</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-bold fs-5" href="/students">Students</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-bold fs-5" href="/schedule">Classes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-bold fs-5" href="/belts">Ranks</a>
+                </li>
+<!--                <li class="nav-item">-->
+<!--                    <a class="nav-link fw-bold fs-5" href="/about">About</a>-->
+<!--                </li>-->
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        {% block content %} {% endblock %}
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+
+    <script type="javascript">
+        async function getRequest(url = '') {
+            const response = await fetch(url, {
+                method: 'GET',
+                cache: 'no-cache'
+            })
+            return response.json()
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            let url = document.location
+            let route = "/flaskwebgui-keep-server-alive"
+            let interval_request = 3 * 1000 //sec
+            function keep_alive_server() {
+                getRequest(url + route)
+                    .then(data => console.log(data))
+            }
+            setInterval(keep_alive_server, interval_request)()
+        })
+    </script>
+
+  </body>
+</html>

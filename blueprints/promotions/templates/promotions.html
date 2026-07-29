@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}
+Promotion management functions
+{% endblock %}
+
+{% block styles %}
+    {{super()}}
+{% endblock %}
+
+{% block scripts %}
+    {{super()}}
+{% endblock %}
+
+{% block content %}
+<h2>Promotions Manager</h2>
+{% include 'partials/student_search.html' %}
+<div style="background-color: #f2ffe6;" class="pt-2">
+    <div class="row d-flex justify-content-center small">
+        <div id="frmCreate" class="row w-100 d-flex justify-content-center mainForm">
+            {% include 'partials/student_details.html' %}
+
+            <div class="row">
+                <div class="col-sm-12 pt-3">
+                    <h5 class="fw-bold text-center">Next promotion details</h5>
+                    <form id="frmStudentPromotions">
+                        <div class="row">
+                            <div class="d-inline-block text-start" style="width: 11rem;">
+                                <label class="form-label ms-1 mb-0 fw-bold">Rank Name:</label>
+                                {% include 'partials/selection_ranks.html' %}
+                            </div>
+                            <div class="d-inline-block text-start ms-1" style="width: 13rem;">
+                                <label class="form-label ms-1 mb-0 fw-bold">Next Stripe Name:</label>
+                                {% include 'partials/selection_stripes.html' %}
+                            </div>
+
+                            <div class="d-inline-block text-start ms-1" style="width: 13rem;">
+                                <label class="form-label ms-1 mb-0 fw-bold">Next Promotion Date:</label>
+                                {% include 'partials/input_promotion_date.html' %}
+                            </div>
+
+                            <div id="div_requirements_counts" class="d-inline-block" style="width: 20rem;">
+
+                                <div class="d-inline-block text-start ms-1" style="width: 8rem;">
+                                    <label class="form-label ms-1 mb-0 fw-bold">Required:</label>
+                                    <input
+                                            id="classesRequired"
+                                            name="classesRequired"
+                                            type="number"
+                                            class="form-control"
+                                            style="width: 7rem;"
+                                            value={{required_attendance_count}}
+                                            disabled
+
+                                    >
+                                </div>
+
+                                <div class="d-inline-block text-start ms-1" style="width: 8rem;">
+                                    <label class="form-label ms-1 mb-0 fw-bold">Attended:</label>
+                                    <input
+                                            id="classesAttended"
+                                            name="classesRequired"
+                                            type="number"
+                                            class="form-control"
+                                            style="width: 7rem;"
+                                            value={{actual_attendance_count}}
+                                            disabled
+
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="d-inline-block text-start ms-1" style="width: 6rem;">
+                                <label class="form-label ms-1 mb-0 fw-bold">&nbsp;</label>
+                                <button id="btnPromotionSave"
+                                        name="btnPromotionSave"
+                                        type="button"
+                                        class="d-inline-block btn btn-sm btn-primary mt-4"
+                                        onclick="fncPromotionSave()"
+                                        style="height: 2rem;">Save
+                                </button>
+                            </div>
+                            <label id="lblPromotionSaveResponse" class="fw-bold ms-1">Awaiting input ...</label>
+                        </div>
+
+                        {% include 'partials/promotion_history.html' %}
+
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/javascript" src="{{ url_for('promotions_bp.static',filename='promotions.js') }}"></script>
+
+
+{% endblock %}

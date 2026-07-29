@@ -1,0 +1,67 @@
+<div id="divPromotionHistory" class="row mt-5" hx-swap-oob="true">
+    <h6 class="fw-bold" >
+        Student promotion history.
+    </h6>
+    <hr>
+    <table id="tblStudentPromotions" class="ms-3">
+        <thead>
+        <tr>
+            <th>Belt name</th>
+            <th>Stripe name</th>
+            <th>Promotion date</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody id="tbodyStudentPromotions">
+            {% for promotion_record in promotions_list %}
+            <tr>
+                <td>{{promotion_record.beltTitle}}</td>
+                <td>{{promotion_record.stripeTitle}}</td>
+                <td><input type="date" id="promotion-date-inp-{{promotion_record.promotionId}}" value={{promotion_record.promotionDate}} ></td>
+                <td>
+                    <button type  = "button"
+                            id    = "save-{{promotion_record.promotionId}}"
+                            class = "btn btn-sm btn-success"
+                            onclick = "savePromotionDate({{promotion_record.promotionId}})">
+                        Save
+                    </button>
+                    <button type  = "button"
+                            id    = "del-{{promotion_record.promotionId}}"
+                            class = "btn btn-sm btn-success"
+                            onclick = "delPromotionRecord({{promotion_record.promotionId}})">
+                        Delete
+                    </button>
+
+                </td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!--        var newRow = `<tr>-->
+<!--                          <td>${promotionHistory[i].beltTitle}</td>-->
+<!--                          <td>${promotionHistory[i].stripeTitle}</td>-->
+<!--                          <td>-->
+<!--                            <input type="date" id="promotion-date-inp-${promotionHistory[i].promotionId}" name="promotion-date-inp-${promotionHistory[i].promotionId}" value=${promotionHistory[i].promotionDate} >-->
+<!--                          </td>-->
+<!--                          <td>-->
+<!--                            <button type  = "button"-->
+<!--                                    id    = "save-${buttonId}"-->
+<!--                                    class = "btn btn-sm btn-success"-->
+<!--                                    onclick = "savePromotionDate(${promotionHistory[i].promotionId})">-->
+<!--                                Save-->
+<!--                            </button>-->
+<!--                            <button type  = "button"-->
+<!--                                    id    = "del-${buttonId}"-->
+<!--                                    class = "btn btn-sm btn-success"-->
+<!--                                    onclick = "delPromotionRecord(${promotionHistory[i].promotionId})">-->
+<!--                                Del-->
+<!--                            </button>-->
+<!--                          </td>-->
+<!--                          <td>-->
+<!--                            <label id="promotion-response_${promotionHistory[i].promotionId}"></label>-->
+<!--                          </td>-->
+<!--                      </tr>`;-->

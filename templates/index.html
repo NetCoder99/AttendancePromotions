@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div className="container mx-auto">
+      <div id="first_spacer" style="height:3rem"></div>
+
+      <div class="d-flex justify-content-center" >
+        <img
+          src="static/images/misc_images/rising-sun-martial-arts-logo.png"
+          alt="No image found"
+          height={160}
+        />
+      </div>
+
+      <div class="row d-flex justify-content-center mt-5" >
+        <div class="col-md-2"></div>
+        <div class="col-md-8 mt-3 mx-auto border rounded-5 ps-5 pt-4 pb-3 mainForm text-center" style="background-color: #f2ffe6">
+          <h3 class="fw-bold mx-auto mb-4">
+            Welcome to the Student Promotion Manager
+          </h3>
+          <form class="d-flex  mx-auto justify-content-center">
+            <input id="badgeNumber" type="text" class="form-control" style="width: 11rem" placeholder="Card number">
+          </form>
+          <div>
+            <h5 id="currentDateTime" class="fw-bold mt-4"></h5>
+          </div>
+        </div>
+        <div class="col-md-2"></div>
+      </div>
+    </div>
+
+{% endblock %}

@@ -1,0 +1,17 @@
+<label>Start by entering the student name:</label>
+<input type="text"
+       id="name_search"
+       name="name_search"
+       placeholder="Type to search..."
+       hx-get="/student_search_by_name"
+       hx-trigger="input change delay:300ms, search"
+       hx-target="#students"
+       hx-swap="innerHTML"
+       list="students"
+       autocomplete="off">
+
+<!-- This datalist element will be populated dynamically by HTMX -->
+<datalist id="students">
+    <!-- Dynamic options appear here -->
+</datalist>
+

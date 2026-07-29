@@ -1,0 +1,173 @@
+.hover-pointer {
+    cursor: pointer;
+}
+.dt-search {
+    margin: 15px 0;
+    float: left;
+    text-align: left;
+}
+
+.dt-search input {
+    width: 30rem
+}
+.btn-new-student{
+    margin: 15px 0;
+    float: right;
+    text-align: right;
+}
+.my-custom-navbar {
+  background-color: #ff5733; /* Example custom color */
+  /* You can also add gradients or background images here */
+}
+
+.my-custom-navbar .navbar-brand,
+.my-custom-navbar .nav-link {
+  color: black; /* Adjust text color for contrast */
+}
+
+.navbar .nav-link:hover {
+  background: lightgray;
+}
+
+.nav-item .active {
+    color: red !important;
+}
+
+h1 {
+    border: 2px #eee solid;
+    color: brown;
+    text-align: center;
+    padding: 10px;
+}
+
+h2 {
+    margin-top: 3rem;
+    border: 2px #eee solid;
+    color: white;
+    background-color: #990e4a;
+    text-align: center;
+    padding: 5px;
+}
+
+h3 {
+    border: 2px #eee solid;
+    color: white;
+    background-color: #990e4a;
+    text-align: center;
+    padding: 5px;
+}
+
+h4 {
+    border: 2px #eee solid;
+    color: white;
+    background-color: #990e4a;
+    text-align: center;
+    padding: 5px;
+}
+
+#tooltip {
+    background-color: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    display: none; /* Hidden by default */
+    z-index: 1000; /* Ensure it appears above other content */
+}
+
+.checkinResponse {
+  background-color: #fff9c4;
+  font-size: 1.5em;
+}
+
+.checkinTimer {
+  display: inline-block;
+  width: 1rem;
+  font-size: 0.5em;
+  color: orange;
+  text-align: right;
+}
+
+.checkinMsg2 {
+  display: inline-block;
+  width: 15rem;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.removed {
+  display: none;
+}
+
+.invalid {
+    border-color: red !important; /* Example for invalid state */
+}
+
+.dropdown-menu {
+  background-color: white; /* Light grey example */
+}
+
+.radio-group input[type="radio"],
+.radio-group label {
+    display: inline-block;
+    margin-right: 1px;
+    vertical-align: middle;
+}
+
+/* To style all header cells */
+table.dataTable thead th {
+    background-color: #337ab7 !important; /* Example: Bootstrap primary blue */
+    color: white !important; /* Optional: Change text color for contrast */
+}
+
+#studentListTable tbody tr:hover {
+    cursor: pointer;
+}
+
+.custom-file-upload {
+    border: 1px solid #ccc;
+    display: inline-block;
+    padding: 6px 12px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    font-family: sans-serif;
+    /* Add more styles for appearance */
+}
+
+input::placeholder { /* Standard syntax */
+  font-style: italic;
+}
+
+.popup-overlay {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5); /* Black background with opacity */
+}
+
+.popup-content {
+  background-color: #fefefe;
+  margin: 15% auto; /* 15% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 600px;
+  position: relative;
+}
+
+.close-button {
+  position: absolute;
+  right: 10px;
+  top: 5px;
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
