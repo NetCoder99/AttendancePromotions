@@ -188,20 +188,14 @@ class Requirements(Base):
 
     requirementId: Mapped[Optional[int]] = mapped_column(Integer, primary_key=True)
     beltId: Mapped[Optional[int]] = mapped_column(ForeignKey('belts.beltId'))
+    beltTitle: Mapped[Optional[str]] = mapped_column(Text)
+    stripeId: Mapped[Optional[int]] = mapped_column(Integer)
     stripeTitle: Mapped[Optional[str]] = mapped_column(Text)
+    stripeSeqNum: Mapped[Optional[int]] = mapped_column(Integer)
+    classesCount: Mapped[Optional[int]] = mapped_column(Integer)
     requiredClasses: Mapped[Optional[int]] = mapped_column(Integer)
+    promotionSeqNum: Mapped[Optional[int]] = mapped_column(Integer)
     createDateTime: Mapped[Optional[str]] = mapped_column(Text)
     updateDateTime: Mapped[Optional[str]] = mapped_column(Text)
 
-    #belts: Mapped[Optional['Belts']] = relationship('Belts', back_populates='requirements')
-
-# class VwEligibilityCounts(Base):
-#     __tablename__ = 'vw_elgibility_counts'      # Name of the view in SQLite
-#     rowNum = Column(Integer, primary_key=True)  # Map an existing unique column
-#     beltId = Column(Integer)
-#     stripePrefixSeq = Column(Integer)
-#     beltTitle       = Column(Text)
-#     stripeTitle     = Column(Text)
-#     classCount      = Column(Integer)
-#     eligibleCount   = Column(Integer)
 

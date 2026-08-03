@@ -1,14 +1,16 @@
 from flask import Blueprint, render_template, request, jsonify, Request
 from flask_htmx import make_response
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from dateutil.parser import parse
 from datetime import date, datetime
 
 import constants
+from blueprints.promotions.promotions_procs import BuildStudentDetailsHtml, BuildAttendanceDetailsHtml, \
+    BuildPromotionsInputHtml, BuildPromotionsHistoryHtml
 from blueprints.promotions.queries import GetPromotionHistoryStmt, GetStripeNamesByRank, GetStudentRecordsStmtByBadge, \
     UpdateStudentRankStmt, InsertPromotionsRankStmt, GetInsertPromotionDict, GetNextPromotion, \
     DeleteStudentPromotionStmt
-from models import Students, Belts, Stripes
+from models import Students, Belts, Stripes, Requirements, Attendance
 from sqlite.sqlite_alchemy import getAlchemySession
 from sqlite.sqlite_procs import GetDataNoArgs, GetDataWithArgs, UpdDataWithArgs
 
@@ -40,56 +42,25 @@ def student_search_by_name():
             or_(Students.firstName.startswith(name_search), Students.lastName.startswith(name_search)))
         student_list = db_session.scalars(student_list_stmt).all()
         response = make_response(render_template('partials/student_names.html', student_list=student_list))
-        return response #render_template('partials/student_names.html', student_list=student_list)
+        return response
 
 
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # search had at least one space, check for badge number
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     badge_number = name_search.split()[0]
     print(f'  generating details from badge number: {badge_number}')
-    student_list_stmt     = select(Students).where(Students.badgeNumber == badge_number)
-    student_list          = db_session.scalars(student_list_stmt).all()
-    student_names_html    = render_template('partials/student_names.html', student_list=student_list)
+    student_list_stmt       = select(Students).where(Students.badgeNumber == badge_number)
+    student_record          = db_session.scalars         (student_list_stmt).all()[0]
+    student_details_html    = BuildStudentDetailsHtml    (student_record)
+    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record)
+    student_promotion_html  = BuildPromotionsInputHtml   (student_record)
+    promotion_history_html  = BuildPromotionsHistoryHtml (student_record)
 
-    student_record = student_list[0]
-    student_name = f'{student_record.firstName} {student_record.lastName}'
-
-    student_details_html  = render_template('partials/student_details.html',
-                                            student_name=student_name,
-                                            student_rank=student_record.currentRankName,
-                                            student_stripe=student_record.currentStripeName)
-
-    belts_records         = db_session.scalars(select(Belts)).all()
-
-    stripe_records        = (db_session
-                             .scalars(select(Stripes)
-                                      .where(Stripes.rankNum == student_record.currentRankNum)
-                                      .order_by(Stripes.seqNum))
-                             .all())
-    selection_ranks       = render_template('partials/selection_ranks.html',
-                                            belts_records=belts_records,
-                                            current_belt_id=student_record.currentRankNum)
-
-    next_promotion        = GetNextPromotion(badge_number)
-    selection_stripes     = render_template('partials/selection_stripes.html',
-                                            stripe_records=stripe_records,
-                                            current_stripe_id=student_record.currentStripeId,
-                                            next_stripe_id=next_promotion['stripeId'])
-
-    promotions_list       = GetDataWithArgs(GetPromotionHistoryStmt(), {'badgeNumber' : badge_number})
-
-    promotion_history     = render_template('partials/promotion_history.html',
-                                            promotions_list=promotions_list)
-
-    input_promotion_date  = render_template('partials/input_promotion_date.html',
-                                            initial_promotion_date=datetime.now().strftime("%Y-%m-%d"))
-
-
-    response = make_response(student_names_html + student_details_html + selection_ranks + selection_stripes + promotion_history + input_promotion_date)
-    return response
-
-@promotions_bp.route('/student_selected')
-def student_selected():
-    print(f'route: student_selected')
+    response = make_response(
+        student_details_html + attendance_counts_html + student_promotion_html + promotion_history_html
+    )
+    return response  #student_details_html + attendance_counts_html + student_promotion_html + promotion_history_html
 
 @promotions_bp.route('/get_stripe_names', methods=['GET', 'POST'])
 def get_stripe_names():
@@ -188,4 +159,46 @@ def del_promotion_record():
         print(f'{str(ex)}')
         return {'status': 'error', 'message' : str(ex) }
 
+# --------------------------------------------------------------------
+@promotions_bp.route('/get_stripes_htmx', methods=['POST', 'GET'])
+def get_stripes_htmx():
+    print(f'Current route: get_stripes_htmx')
+    print(f'request: {request.args['studentBeltNames']}')
+    student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
+    student_record          = db_session.scalars         (student_list_stmt).all()[0]
 
+    rank_num                = request.args['studentBeltNames']
+    stripe_list_stmt        = select(Requirements).where(Requirements.beltId == rank_num).order_by(Requirements.stripeSeqNum)
+    stripe_records          = db_session.scalars(stripe_list_stmt).all()
+    input_select_stripes    = render_template('controls/input_select_stripes.html', stripe_records=stripe_records)
+    student_record.currentStripeId = stripe_records[0].stripeId
+    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record)
+
+    return input_select_stripes + attendance_counts_html # render_template('controls/input_select_stripes.html', stripe_records=stripe_records)
+
+# --------------------------------------------------------------------
+@promotions_bp.route('/upd_requirements_htmx', methods=['GET', 'POST'])
+def upd_requirements_htmx():
+    print(f'Current route: upd_requirements_htmx')
+    student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
+    student_record          = db_session.scalars         (student_list_stmt).all()[0]
+    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record)
+    return attendance_counts_html
+
+# --------------------------------------------------------------------
+@promotions_bp.route('/upd_student_rank_htmx', methods=['GET', 'POST'])
+def upd_student_rank_htmx():
+    print(f'Current route: upd_student_rank_htmx')
+    student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
+    student_record          = db_session.scalars         (student_list_stmt).all()[0]
+    selected_stripe_id      = request.args['studentBeltStripes']
+
+    # do not apply if no changes
+    # if IsDuplicatePromotion(student_record, request.json):
+    #     return {'status': 'error', 'badgeNumber': request.json['badgeNumber'],
+    #             'message': 'Current promotion matches last promotion!'}
+
+
+    response = make_response("Student record was updated!")
+    response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
+    return response

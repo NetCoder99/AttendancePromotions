@@ -71,6 +71,29 @@ def GetNextPromotionStmt():
             limit  1
         '''
 
+def GetNextPromotionStmtV2():
+    return '''
+        select r1.requirementId,
+            r1.beltId,
+            r1.beltTitle,
+            r1.stripeId,
+            r1.stripeTitle,
+            r1.stripeSeqNum,
+            r1.classesCount,
+            r1.requiredClasses,
+            r1.promotionSeqNum,
+            r1.createDateTime,
+            r1.updateDateTime
+        from   requirements r1 
+        where  r1.requirementId > 
+        (
+            select r.requirementId
+            from   requirements r 
+            order  by r.beltId, stripeSeqNum
+        )
+        limit 1  
+        '''
+
 def GetStudentRecordsStmtByBadge():
     return '''
         with cte_default_image as (

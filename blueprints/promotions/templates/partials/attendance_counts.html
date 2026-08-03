@@ -1,0 +1,40 @@
+<div id="div_attendance_counts" class="row w-100 mt-2" hx-swap-oob="true" >
+    <h5 class="fw-bold mt-3 justify-start" style="width: 15rem;">Attendance Counts:</h5>
+
+    <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
+        <label class="form-label ms-1 mb-0 fw-bold">Total classes attended:</label>
+        <input
+                id="inpTotalAttended"
+                name="inpTotalAttended"
+                type="text"
+                class="form-control"
+                readonly
+                value="{{total_classes_attended}}"
+        >
+    </div>
+
+    <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
+        <label class="form-label ms-1 mb-0 fw-bold">Required from last:</label>
+        <input
+                id="inpClassesRequired"
+                name="inpClassesRequired"
+                type="text"
+                class="form-control"
+                readonly
+                value="{{required_promotion_count}}"
+        >
+    </div>
+
+    <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
+        <label class="form-label ms-1 mb-0 fw-bold">Required total:</label>
+        <input
+                id="inpTotalClassesRequired"
+                name="inpTotalClassesRequired"
+                type="number"
+                class="form-control"
+                value="{{required_total_count}}"
+                disabled
+
+        >
+    </div>
+</div>
