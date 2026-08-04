@@ -1,9 +1,10 @@
 from flask import render_template
-from flask_htmx import make_response
+#from flask_htmx import make_response
 from sqlalchemy import select, func
 from datetime import datetime
 
-from blueprints.promotions.queries import GetNextPromotion
+#from blueprints.promotions.queries import GetNextPromotion
+from dateutil.parser import parse, ParserError
 from models import Students, Requirements, Attendance, Belts, Promotions
 from sqlite.sqlite_alchemy import getAlchemySession
 
@@ -14,16 +15,7 @@ def BuildStudentDetailsHtml(student_record: Students):
     student_record        = db_session.scalars(student_list_stmt).all()[0]
     student_name = f'{student_record.firstName} {student_record.lastName}'
 
-    if not student_record.currentRankNum:
-        requirement_record = (db_session
-                          .scalars(select(Requirements)
-                                   .where(Requirements.beltId == 1)
-                                   .order_by(Requirements.stripeSeqNum))
-                          .all())[0]
-        student_record.currentRankNum     = requirement_record.beltId
-        student_record.currentRankName    = requirement_record.beltTitle
-        student_record.currentStripeId    = requirement_record.stripeId
-        student_record.currentStripeName  = requirement_record.stripeTitle
+    CheckStudentRank(student_record)
 
     student_details_html  = render_template('partials/student_details.html',
                                             badge_number=student_record.badgeNumber,
@@ -34,6 +26,8 @@ def BuildStudentDetailsHtml(student_record: Students):
 
 def BuildAttendanceDetailsHtml(student_record: Students):
     try:
+        CheckStudentRank(student_record)
+
         stripe_id              = student_record.currentStripeId
         requirement_list_stmt  = select(Requirements).where(Requirements.stripeId == stripe_id)
         requirement_record     = db_session.scalars(requirement_list_stmt).all()[0]
@@ -72,40 +66,21 @@ def BuildPromotionsInputHtml(student_record: Students):
             db_session.scalars(select(Requirements).where(Requirements.stripeId == student_record.currentStripeId))
             .first()
         )
+
+        next_requirement_stmt = (select(Requirements)
+                                 .where(Requirements.requirementId > current_requirement_record.requirementId)
+        )
         next_requirement_record = (
-            db_session.scalars(select(Requirements)
-                               .where(Requirements.requirementId > current_requirement_record.requirementId)
-                               .order_by(Requirements.requirementId))
+            db_session.scalars(next_requirement_stmt)
             .first()
         )
-
-        # #next_promotion        = GetNextPromotion(student_record.badgeNumber)
-        # if not next_promotion:
-        #     current_requirement_record = (
-        #         db_session.scalars(select(Requirements)
-        #                            .where(Requirements.beltId == student_record.currentStripeId)
-        #                            .order_by(Requirements.stripeSeqNum))
-        #                          .first()
-        #     )
-        #     next_requirement_record = (
-        #         db_session.scalars(select(Requirements)
-        #                            .where(Requirements.requirementId > current_requirement_record.requirementId)
-        #                            .order_by(Requirements.requirementId))
-        #                            .first()
-        #     )
-        #
-
-        # selection_stripes     = render_template('controls/selection_stripes.html',
-        #                                         stripe_records=stripe_records,
-        #                                         current_stripe_id=student_record.currentStripeId,
-        #                                         next_stripe_id=next_promotion['stripeId'])
 
         student_promotions    = render_template('partials/student_promotions.html',
                                                 belts_records     = belts_records,
                                                 current_belt_id   = student_record.currentRankNum,
                                                 stripe_records    = stripe_records,
                                                 current_stripe_id = student_record.currentStripeId,
-                                                next_stripe_id    = 181,
+                                                next_stripe_id    = next_requirement_record.stripeId,
                                                 initial_promotion_date=datetime.now().strftime("%Y-%m-%d"))
         return student_promotions
     except Exception as ex:
@@ -121,3 +96,82 @@ def BuildPromotionsHistoryHtml(student_record: Students):
     promotion_history     = render_template('partials/promotion_history.html',
                                             promotions_list=promotion_list)
     return promotion_history
+
+# -----------------------------------------------------------------------------------
+# during development the student rank/stripe is not reliably set
+# -----------------------------------------------------------------------------------
+def CheckStudentRank(student_record: Students):
+    try:
+        # if both rank and stripe are not set then check for a promotion record, use that if found
+        # else default to white belt with no stripe
+        if not student_record.currentRankNum and not student_record.currentStripeId:
+            promotion_record_stmt = (select(Promotions)
+                                     .where(Promotions.badgeNumber == student_record.badgeNumber)
+                                     .order_by(Promotions.promotionDate.desc()))
+            promotion_record = db_session.scalars(promotion_record_stmt).first()
+            if promotion_record:
+                student_record.currentRankNum     = promotion_record.beltId
+                student_record.currentRankName    = promotion_record.beltTitle
+                student_record.currentStripeId    = promotion_record.stripeId
+                student_record.currentStripeName  = promotion_record.stripeTitle
+            else:
+                requirement_record = (db_session
+                                  .scalars(select(Requirements)
+                                           .where(Requirements.beltId == 1)
+                                           .order_by(Requirements.stripeSeqNum))
+                                  .all())[0]
+                student_record.currentRankNum     = requirement_record.beltId
+                student_record.currentRankName    = requirement_record.beltTitle
+                student_record.currentStripeId    = requirement_record.stripeId
+                student_record.currentStripeName  = requirement_record.stripeTitle
+        elif not student_record.currentRankNum and student_record.currentStripeId:
+            # get and set the belt/rank for the related stripe
+            requirement_record_stmt = (
+                select(Requirements)
+                .where(Requirements.stripeId == student_record.currentStripeId)
+            )
+            requirement_record = db_session.scalars(requirement_record_stmt).first()
+            student_record.currentRankNum = requirement_record.beltId
+            student_record.currentRankName = requirement_record.beltTitle
+        elif student_record.currentRankNum and not student_record.currentStripeId:
+            # get and set the initial stripe for the current belt/rank
+            requirement_record_stmt = (
+                select(Requirements)
+                .where(Requirements.beltId == student_record.currentRankNum)
+                .order_by(Requirements.stripeSeqNum)
+            )
+            requirement_record = db_session.scalars(requirement_record_stmt).first()
+            student_record.currentStripeId = requirement_record.stripeId
+            student_record.currentStripeName = requirement_record.stripeTitle
+
+        print(f'CheckStudentRank :: Session state before: {db_session.is_modified(student_record)}')
+        if db_session.is_modified(student_record):
+            db_session.commit()
+        print(f'CheckStudentRank :: Session state after: {db_session.is_modified(student_record)}')
+
+    except Exception as ex:
+        print(f'Error: {str(ex)}')
+        raise ex
+
+# -----------------------------------------------------------------------------------
+# ensure the promotion is being updated
+# -----------------------------------------------------------------------------------
+def IsDuplicatePromotion(studentData: Students, requestJson) -> bool:
+    if studentData.currentRankNum is None:
+        return False
+    currentRankNum   = studentData.currentRankNum
+    selectedBeltId   = int(requestJson['beltId'])
+    currentStripeId  = studentData.currentStripeId
+    selectedStripeId = int(requestJson['stripeId'])
+    if studentData.studentPromotionDate is None:
+        currentPromotionDate = datetime.fromisoformat("1900-01-01T00:00:00")
+    else:
+        currentPromotionDate = parse(studentData.studentPromotionDate, fuzzy=False).date()
+        #currentPromotionDate = studentData.studentPromotionDate
+    selectedPromotionDate = requestJson['promotionDate']
+    if (   currentRankNum == selectedBeltId
+       and currentStripeId == selectedStripeId
+       and currentPromotionDate == selectedPromotionDate):
+        return True
+
+    return False

@@ -147,16 +147,16 @@ def GetStudentRecordsStmtByBadge():
         where  s.badgeNumber    = :badgeNumber    
     '''
 
-def UpdateStudentRankStmt():
-    return '''
-        update students  
-        set    currentRankNum       = :currentRankNum,
-               currentRankName      = :currentRankName,
-               currentStripeId      = :currentStripeId,
-               currentStripeName    = :currentStripeName,
-               studentPromotionDate = :studentPromotionDate
-        where  badgeNumber       = :badgeNumber
-    '''
+# def UpdateStudentRankStmt():
+#     return '''
+#         update students
+#         set    currentRankNum       = :currentRankNum,
+#                currentRankName      = :currentRankName,
+#                currentStripeId      = :currentStripeId,
+#                currentStripeName    = :currentStripeName,
+#                studentPromotionDate = :studentPromotionDate
+#         where  badgeNumber       = :badgeNumber
+#     '''
 
 def InsertPromotionsRankStmt():
     return '''

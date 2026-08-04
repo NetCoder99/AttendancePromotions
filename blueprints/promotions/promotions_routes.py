@@ -6,13 +6,11 @@ from datetime import date, datetime
 
 import constants
 from blueprints.promotions.promotions_procs import BuildStudentDetailsHtml, BuildAttendanceDetailsHtml, \
-    BuildPromotionsInputHtml, BuildPromotionsHistoryHtml
-from blueprints.promotions.queries import GetPromotionHistoryStmt, GetStripeNamesByRank, GetStudentRecordsStmtByBadge, \
-    UpdateStudentRankStmt, InsertPromotionsRankStmt, GetInsertPromotionDict, GetNextPromotion, \
-    DeleteStudentPromotionStmt
-from models import Students, Belts, Stripes, Requirements, Attendance
-from sqlite.sqlite_alchemy import getAlchemySession
-from sqlite.sqlite_procs import GetDataNoArgs, GetDataWithArgs, UpdDataWithArgs
+    BuildPromotionsInputHtml, BuildPromotionsHistoryHtml, IsDuplicatePromotion
+from blueprints.promotions.queries import GetPromotionHistoryStmt, GetStripeNamesByRank, DeleteStudentPromotionStmt
+from models import Students, Belts, Stripes, Requirements, Attendance, Promotions
+from sqlite.sqlite_alchemy import getAlchemySession, listDbSessions
+from sqlite.sqlite_procs import GetDataNoArgs, GetDataWithArgs
 
 promotions_bp = Blueprint(
     'promotions_bp', __name__,
@@ -31,36 +29,31 @@ def promotions_bp_home():
 
 @promotions_bp.route('/student_search_by_name')
 def student_search_by_name():
-    print(f'route: student_search_by_name')
-    name_search = request.args.get("name_search", "").strip().lower()
-    print(f'  query: {name_search}')
+    try:
+        print(f'route: student_search_by_name')
+        name_search = request.args.get("name_search", "").strip().lower()
+        print(f'  query: {name_search}')
 
-    # no spaces, the user is typing, populate the datalist/select object
-    if name_search.count(" ") == 0:
-        print(f'  generating datalist from search: {name_search} ')
-        student_list_stmt = select(Students).where(
-            or_(Students.firstName.startswith(name_search), Students.lastName.startswith(name_search)))
-        student_list = db_session.scalars(student_list_stmt).all()
-        response = make_response(render_template('partials/student_names.html', student_list=student_list))
-        return response
+        # no spaces, the user is typing, populate the datalist/select object
+        if name_search.count(" ") == 0:
+            print(f'  generating datalist from search: {name_search} ')
+            student_list_stmt = select(Students).where(
+                or_(Students.firstName.startswith(name_search), Students.lastName.startswith(name_search)))
+            student_list = db_session.scalars(student_list_stmt).all()
+            response = make_response(render_template('partials/student_names.html', student_list=student_list))
+            return response
 
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # search had at least one space, check for badge number
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    badge_number = name_search.split()[0]
-    print(f'  generating details from badge number: {badge_number}')
-    student_list_stmt       = select(Students).where(Students.badgeNumber == badge_number)
-    student_record          = db_session.scalars         (student_list_stmt).all()[0]
-    student_details_html    = BuildStudentDetailsHtml    (student_record)
-    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record)
-    student_promotion_html  = BuildPromotionsInputHtml   (student_record)
-    promotion_history_html  = BuildPromotionsHistoryHtml (student_record)
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # search had at least one space, check for badge number
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        badge_number = name_search.split()[0]
+        student_details_response = make_response(BuildStudentPromotionsScreen(badge_number))
+        return student_details_response
 
-    response = make_response(
-        student_details_html + attendance_counts_html + student_promotion_html + promotion_history_html
-    )
-    return response  #student_details_html + attendance_counts_html + student_promotion_html + promotion_history_html
+    except Exception as ex:
+        print(f'{str(ex)}')
+        return {'status': 'error', 'message' : str(ex) }
 
 @promotions_bp.route('/get_stripe_names', methods=['GET', 'POST'])
 def get_stripe_names():
@@ -68,70 +61,6 @@ def get_stripe_names():
     sqlQuery      = GetStripeNamesByRank()
     stripeRecords = GetDataWithArgs(sqlQuery, request.json)
     return stripeRecords
-
-
-@promotions_bp.route('/upd_student_rank', methods=['GET', 'POST'])
-def upd_student_rank():
-    print(f'Current route: upd_student_rank')
-    studentData       = GetDataWithArgs(GetStudentRecordsStmtByBadge(), {'badgeNumber': request.json['badgeNumber']})
-    promotionHistory  = GetDataWithArgs(GetPromotionHistoryStmt(), request.json)
-
-    # do not apply if no changes
-    if IsDuplicatePromotion(studentData, request.json):
-        return {'status': 'error', 'badgeNumber': request.json['badgeNumber'],
-                'message': 'Current promotion matches last promotion!'}
-
-    updStudentQuery   = UpdateStudentRankStmt()
-    updStudentDict    = {
-        'currentRankNum'    : request.json['beltId'],
-        'currentRankName'   : request.json['beltTitle'],
-        'currentStripeId'   : request.json['stripeId'],
-        'currentStripeName' : request.json['stripeTitle'],
-        'badgeNumber'       : request.json['badgeNumber'],
-        # 'studentPromotionDate': request.json['promotionDate']
-    }
-
-    # adjust the date to consistent format
-    studentPromotionDate = parse(request.json['promotionDate'], fuzzy=False).strftime(constants.fmtDateTime)
-    updStudentDict['studentPromotionDate'] = studentPromotionDate
-    updStudentDict['comments'] = 'Promotion'
-
-    # update the student record
-    updateCounts = UpdDataWithArgs(updStudentQuery, updStudentDict)
-
-    #insert the history record
-    insertPromotionStmt = InsertPromotionsRankStmt()
-    insertPromotionDict = GetInsertPromotionDict(studentData, updStudentDict)
-    insertCounts        = UpdDataWithArgs(insertPromotionStmt, insertPromotionDict)
-
-    return {'status': 'ok',
-            'badgeNumber': request.json['badgeNumber'],
-            'lastRowId': updateCounts['lastrowid'],
-            'rowCount': updateCounts['rowcount']
-            }
-
-def IsDuplicatePromotion(studentData, requestJson) -> bool:
-    if studentData[0]['currentRankNum'] is None:
-        return False
-
-    currentRankNum   = int(studentData[0]['currentRankNum'])
-    selectedBeltId   = int(requestJson['beltId'])
-    currentStripeId  = int(studentData[0]['currentStripeId'])
-    selectedStripeId = int(requestJson['stripeId'])
-
-    if studentData[0]['studentPromotionDate'] is None:
-        currentPromotionDate = datetime.fromisoformat("1900-01-01T00:00:00")
-    else:
-        currentPromotionDate = parse(studentData[0]['studentPromotionDate'], fuzzy=False).date()
-
-    selectedPromotionDate = parse(request.json['promotionDate'], fuzzy=False).date()
-
-    if (   currentRankNum == selectedBeltId
-       and currentStripeId == selectedStripeId
-       and currentPromotionDate == selectedPromotionDate):
-        return True
-
-    return False
 
 @promotions_bp.route('/get_promotion_history', methods=['GET', 'POST'])
 def get_promotion_history():
@@ -146,7 +75,7 @@ def del_promotion_record():
     try:
         print(f'request: {request.json['promotionId']}')
         delQuery          = DeleteStudentPromotionStmt()
-        delete_counts     = UpdDataWithArgs(delQuery, {'promotionId': request.json['promotionId']})
+        #delete_counts     = UpdDataWithArgs(delQuery, {'promotionId': request.json['promotionId']})
 
         sqlQuery          = GetPromotionHistoryStmt()
         promotionHistory  = GetDataWithArgs(sqlQuery, {'badgeNumber' : request.json['badgeNumber']})
@@ -188,17 +117,70 @@ def upd_requirements_htmx():
 # --------------------------------------------------------------------
 @promotions_bp.route('/upd_student_rank_htmx', methods=['GET', 'POST'])
 def upd_student_rank_htmx():
-    print(f'Current route: upd_student_rank_htmx')
-    student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
-    student_record          = db_session.scalars         (student_list_stmt).all()[0]
-    selected_stripe_id      = request.args['studentBeltStripes']
+    try:
+        print(f'Current route: upd_student_rank_htmx')
+        student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
+        student_record          = db_session.scalars(student_list_stmt).first()
 
-    # do not apply if no changes
-    # if IsDuplicatePromotion(student_record, request.json):
-    #     return {'status': 'error', 'badgeNumber': request.json['badgeNumber'],
-    #             'message': 'Current promotion matches last promotion!'}
+        belt_id        = request.args['studentBeltNames']
+        stripe_id      = request.args['studentBeltStripes']
+        promotion_date = datetime.now().strftime(constants.fmtDateTime)
+
+        # do not apply if no changes
+        request_json = {
+            'beltId'        : belt_id,
+            'stripeId'      : stripe_id,
+            'promotionDate' : parse(request.args['studentPromotionDate'], fuzzy=False).date()
+        }
+        if IsDuplicatePromotion(student_record, request_json):
+            return_message = "No changes to save!"
+            response = make_response(return_message)
+            response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
+
+        # update the student record from the new data
+        requirement_record_stmt = (select(Requirements)
+                                       .where(Requirements.beltId == belt_id, Requirements.stripeId == stripe_id)
+                                   )
+        requirement_record = db_session.scalars(requirement_record_stmt).first()
+        student_record.currentRankNum    = requirement_record.beltId
+        student_record.currentRankName   = requirement_record.beltTitle
+        student_record.currentStripeId   = requirement_record.stripeId
+        student_record.currentStripeName = requirement_record.stripeTitle
+        student_record.studentPromotionDate = promotion_date
+        db_session.commit()
+
+        promotion_record = Promotions()
+        promotion_record.badgeNumber = student_record.badgeNumber
+        promotion_record.beltId      = student_record.currentRankNum
+        promotion_record.beltTitle   = student_record.currentRankName
+        promotion_record.stripeId    = student_record.currentStripeId
+        promotion_record.stripeTitle = student_record.currentStripeName
+        promotion_record.studentName      = student_record.firstName + ' ' + student_record.lastName
+        promotion_record.promotionDate    = promotion_date
+        promotion_record.studentFirstName = student_record.firstName
+        promotion_record.studentLastName  = student_record.lastName
+        promotion_record.comments         = "Promotion"
+        promotion_record.createDateTime   = datetime.now().strftime(constants.fmtDateTime)
+        db_session.add(promotion_record)
+        db_session.commit()
+
+        return_message = "Student record was updated!"
+
+        student_details_html = BuildStudentPromotionsScreen(student_record.badgeNumber)
+        response = make_response(return_message + student_details_html)
+        response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
+        return response
+    except Exception as ex:
+        print(f'{str(ex)}')
+        return {'status': 'error', 'message': str(ex)}
 
 
-    response = make_response("Student record was updated!")
-    response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
-    return response
+def BuildStudentPromotionsScreen(badge_number):
+    print(f'  generating details from badge number: {badge_number}')
+    student_list_stmt = select(Students).where(Students.badgeNumber == badge_number)
+    student_record = db_session.scalars(student_list_stmt).all()[0]
+    student_details_html = BuildStudentDetailsHtml(student_record)
+    attendance_counts_html = BuildAttendanceDetailsHtml(student_record)
+    student_promotion_html = BuildPromotionsInputHtml(student_record)
+    promotion_history_html = BuildPromotionsHistoryHtml(student_record)
+    return student_details_html + attendance_counts_html + student_promotion_html + promotion_history_html

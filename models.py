@@ -97,9 +97,10 @@ class Students(Base):
     currentRankNum:     Mapped[Optional[int]] = mapped_column(Integer)
     currentRankName:    Mapped[Optional[str]] = mapped_column(Text)
     currentStripeId:    Mapped[Optional[int]] = mapped_column(Integer)
-    currentStripeName:  Mapped[Optional[str]] = mapped_column(Text)
-    createDateTime:     Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    updateDateTime:     Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    currentStripeName:    Mapped[Optional[str]] = mapped_column(Text)
+    studentPromotionDate: Mapped[Optional[str]] = mapped_column(Text)
+    createDateTime:       Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    updateDateTime:       Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
 class Classes(Base):
     __tablename__ = 'classes'

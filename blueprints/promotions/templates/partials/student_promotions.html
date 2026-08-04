@@ -17,20 +17,6 @@
 
     {% include 'controls/input_select_stripes.html' %}
 
-<!--    <div class="d-inline-block text-start ms-1" style="width: 12rem;">-->
-<!--        <label class="form-label ms-1 mb-0 fw-bold">Next Stripe Name:</label>-->
-<!--        <select name="studentBeltStripes"-->
-<!--                id="studentBeltStripes"-->
-<!--                class="form-select"-->
-<!--                hx-get="/upd_requirements_htmx"-->
-<!--                hx-trigger="change"-->
-<!--                hx-target="#div_attendance_counts">-->
-<!--            {% for stripe_record in stripe_records %}-->
-<!--                <option value="{{ stripe_record.stripeId }}" {% if stripe_record.stripeId == next_stripe_id %}selected{% endif %}>{{ stripe_record.stripeTitle }}</option>-->
-<!--            {% endfor %}-->
-<!--        </select>-->
-<!--    </div>-->
-
     <div class="d-inline-block text-start ms-1" style="width: 12rem;">
         <label class="form-label ms-1 mb-0 fw-bold">Next Promotion Date:</label>
         <input id="studentPromotionDate"
