@@ -126,13 +126,13 @@ def upd_student_rank_htmx():
 
         belt_id        = request.args['studentBeltNames']
         stripe_id      = request.args['studentBeltStripes']
-        promotion_date = datetime.now().strftime(constants.fmtDateTime)
+        promotion_date = parse(request.args['studentPromotionDate'], fuzzy=False) #.date()
 
         # do not apply if no changes
         request_json = {
             'beltId'        : belt_id,
             'stripeId'      : stripe_id,
-            'promotionDate' : parse(request.args['studentPromotionDate'], fuzzy=False).date()
+            'promotionDate' : promotion_date
         }
         if IsDuplicatePromotion(student_record, request_json):
             return_message = "No changes to save!"
@@ -140,7 +140,7 @@ def upd_student_rank_htmx():
             response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
 
         # update the student record from the new data
-        UpdStudentPromotionRecords(db_session, student_record, int(belt_id), int(stripe_id), datetime.now())
+        UpdStudentPromotionRecords(student_record, int(belt_id), int(stripe_id), promotion_date)
 
         return_message = "Student record was updated!"
         student_details_html = BuildStudentPromotionsScreen(student_record.badgeNumber)

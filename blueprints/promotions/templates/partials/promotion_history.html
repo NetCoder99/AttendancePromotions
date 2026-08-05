@@ -8,6 +8,7 @@
         <tr>
             <th>Belt name</th>
             <th>Stripe name</th>
+            <th>Promotion Type</th>
             <th>Promotion date</th>
             <th>Action</th>
         </tr>
@@ -17,6 +18,7 @@
             <tr>
                 <td>{{promotion_record.beltTitle}}</td>
                 <td>{{promotion_record.stripeTitle}}</td>
+                <td>{{promotion_record.promotionType}}</td>
                 <td><input type="date" id="promotion-date-inp-{{promotion_record.promotionId}}" value={{promotion_record.promotionDate}} ></td>
                 <td>
                     <button type  = "button"

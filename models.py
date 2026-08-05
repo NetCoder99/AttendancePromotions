@@ -53,6 +53,7 @@ class Promotions(Base):
     studentFirstName: Mapped[Optional[str]] = mapped_column(Text)
     studentLastName: Mapped[Optional[str]] = mapped_column(Text)
     comments: Mapped[Optional[str]] = mapped_column(Text)
+    promotionType: Mapped[Optional[str]] = mapped_column(Text)
     createDateTime:  Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     updateDateTime:  Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
@@ -199,4 +200,16 @@ class Requirements(Base):
     createDateTime: Mapped[Optional[str]] = mapped_column(Text)
     updateDateTime: Mapped[Optional[str]] = mapped_column(Text)
 
+
+class NextPromotion:
+    current_requirement_record    : Requirements
+    next_requirement_record       : Requirements
+    belt_records                  : list[Belts]
+    stripe_records                : list[Stripes]
+    attendance_total              : int
+    attendance_since_belt         : int
+    attendance_since_stripe       : int
+    classes_remaining_from_base   : int
+    classes_remaining_from_belt   : int
+    classes_remaining_from_stripe : int
 
