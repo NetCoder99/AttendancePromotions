@@ -6,10 +6,11 @@ from datetime import date, datetime
 
 import constants
 from blueprints.promotions.promotions_procs import BuildStudentDetailsHtml, BuildAttendanceDetailsHtml, \
-    BuildPromotionsInputHtml, BuildPromotionsHistoryHtml, IsDuplicatePromotion
+    BuildPromotionsInputHtml, BuildPromotionsHistoryHtml, IsDuplicatePromotion, UpdStudentPromotionRecords
 from blueprints.promotions.queries import GetPromotionHistoryStmt, GetStripeNamesByRank, DeleteStudentPromotionStmt
 from models import Students, Belts, Stripes, Requirements, Attendance, Promotions
 from sqlite.sqlite_alchemy import getAlchemySession, listDbSessions
+from sqlite.sqlite_manager import sqlite_manager
 from sqlite.sqlite_procs import GetDataNoArgs, GetDataWithArgs
 
 promotions_bp = Blueprint(
@@ -19,7 +20,8 @@ promotions_bp = Blueprint(
     static_url_path = '/promotions_bp_static'
 )
 
-db_session = getAlchemySession()
+# db_session = getAlchemySession()
+db_session = sqlite_manager().session
 
 @promotions_bp.route('/promotions')
 def promotions_bp_home():
@@ -94,7 +96,7 @@ def get_stripes_htmx():
     print(f'Current route: get_stripes_htmx')
     print(f'request: {request.args['studentBeltNames']}')
     student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
-    student_record          = db_session.scalars         (student_list_stmt).all()[0]
+    student_record          = db_session.scalars(student_list_stmt).first()
 
     rank_num                = request.args['studentBeltNames']
     stripe_list_stmt        = select(Requirements).where(Requirements.beltId == rank_num).order_by(Requirements.stripeSeqNum)
@@ -110,7 +112,7 @@ def get_stripes_htmx():
 def upd_requirements_htmx():
     print(f'Current route: upd_requirements_htmx')
     student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
-    student_record          = db_session.scalars         (student_list_stmt).all()[0]
+    student_record          = db_session.scalars(student_list_stmt).first()
     attendance_counts_html  = BuildAttendanceDetailsHtml (student_record)
     return attendance_counts_html
 
@@ -138,40 +140,15 @@ def upd_student_rank_htmx():
             response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
 
         # update the student record from the new data
-        requirement_record_stmt = (select(Requirements)
-                                       .where(Requirements.beltId == belt_id, Requirements.stripeId == stripe_id)
-                                   )
-        requirement_record = db_session.scalars(requirement_record_stmt).first()
-        student_record.currentRankNum    = requirement_record.beltId
-        student_record.currentRankName   = requirement_record.beltTitle
-        student_record.currentStripeId   = requirement_record.stripeId
-        student_record.currentStripeName = requirement_record.stripeTitle
-        student_record.studentPromotionDate = promotion_date
-        db_session.commit()
-
-        promotion_record = Promotions()
-        promotion_record.badgeNumber = student_record.badgeNumber
-        promotion_record.beltId      = student_record.currentRankNum
-        promotion_record.beltTitle   = student_record.currentRankName
-        promotion_record.stripeId    = student_record.currentStripeId
-        promotion_record.stripeTitle = student_record.currentStripeName
-        promotion_record.studentName      = student_record.firstName + ' ' + student_record.lastName
-        promotion_record.promotionDate    = promotion_date
-        promotion_record.studentFirstName = student_record.firstName
-        promotion_record.studentLastName  = student_record.lastName
-        promotion_record.comments         = "Promotion"
-        promotion_record.createDateTime   = datetime.now().strftime(constants.fmtDateTime)
-        db_session.add(promotion_record)
-        db_session.commit()
+        UpdStudentPromotionRecords(db_session, student_record, int(belt_id), int(stripe_id), datetime.now())
 
         return_message = "Student record was updated!"
-
         student_details_html = BuildStudentPromotionsScreen(student_record.badgeNumber)
         response = make_response(return_message + student_details_html)
         response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
         return response
     except Exception as ex:
-        print(f'{str(ex)}')
+        print(f'{constants.consoleRed}{str(ex)}')
         return {'status': 'error', 'message': str(ex)}
 
 

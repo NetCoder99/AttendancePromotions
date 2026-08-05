@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from blueprints.promotions.promotions_routes import promotions_bp
 from sqlite.sqlite_alchemy import getAlchemySession, listDbSessions
+from sqlite.sqlite_manager import sqlite_manager
 
 # ----------------------------------------------------------------------------------
 base_dir = '.'
@@ -23,6 +24,8 @@ app.register_blueprint(promotions_bp)
 
 htmx = HTMX(app)
 
+
+db_session = sqlite_manager()
 # ----------------------------------------------------------------------------------
 @app.route('/')
 def index():

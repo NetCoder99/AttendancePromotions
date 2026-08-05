@@ -1,0 +1,14 @@
+    <div class="d-inline-block text-start" style="width: 12rem;">
+        <label class="form-label ms-1 mb-0 fw-bold">Rank Name:</label>
+        <select name="studentBeltNames"
+                id="studentBeltNames"
+                class="form-select"
+                hx-get="/get_stripes_htmx"
+                hx-trigger="change"
+                hx-include="#hdnBadgeNumber"
+                hx-target="#studentBeltStripes">
+            {% for belt_record in belts_records %}
+                <option value="{{ belt_record.beltId }}" {% if belt_record.beltId == next_belt_id %}selected{% endif %}>{{ belt_record.beltTitle }}</option>
+            {% endfor %}
+        </select>
+    </div>
