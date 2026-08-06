@@ -152,10 +152,10 @@ def CheckStudentRank(student_record: Students):
             student_record.currentStripeId = requirement_record.stripeId
             student_record.currentStripeName = requirement_record.stripeTitle
 
-        print(f'CheckStudentRank :: Session state before: {db_session.is_modified(student_record)}')
+        # print(f'CheckStudentRank :: Session state before: {db_session.is_modified(student_record)}')
         if db_session.is_modified(student_record):
             db_session.commit()
-        print(f'CheckStudentRank :: Session state after: {db_session.is_modified(student_record)}')
+        # print(f'CheckStudentRank :: Session state after: {db_session.is_modified(student_record)}')
 
     except Exception as ex:
         print(f'Error: {str(ex)}')
@@ -258,18 +258,30 @@ def GetNextPromotionDetails(student_record: Students):
                       .all())
     next_promotion_record.stripe_records = stripe_records
 
-    # get the attendance counts
+    # get the latest promotion dates
+    next_promotion_record.last_belt_promotion_date    = GetLastBeltPromotionDate(student_record)
+    next_promotion_record.last_stripe_promotion_date  = GetLastStripePromotionDate(student_record)
+
+    # populate the attendance counts
     attendance_total_stmt = (select(func.count())
                              .select_from(Attendance)
-                             .where(Attendance.badgeNumber == student_record.badgeNumber)
-                             )
-    next_promotion_record.attendance_total = db_session.scalar(attendance_total_stmt)
-    last_belt_promotion_date    = GetLastBeltPromotionDate(student_record)
-    last_stripe_promotion_date  = GetLastStripePromotionDate(student_record)
-    # attendance_since_belt         : int
-    # attendance_since_stripe       : int
-    #
+                             .where(Attendance.badgeNumber == student_record.badgeNumber))
+    next_promotion_record.attendance_count_total = db_session.scalar(attendance_total_stmt)
 
+    attendance_since_belt_stmt = (select(func.count())
+                                  .select_from(Attendance)
+                                  .where(Attendance.badgeNumber == student_record.badgeNumber)
+                                  .where(Attendance.checkinDateTime >=  next_promotion_record.last_belt_promotion_date)
+                                  )
+    #print(f'attendance_since_belt_stmt\n{attendance_since_belt_stmt.compile(compile_kwargs={"literal_binds": True})}')
+    next_promotion_record.attendance_count_since_belt = db_session.scalar(attendance_since_belt_stmt)
+
+    attendance_since_stripe_stmt = (select(func.count())
+                                  .select_from(Attendance)
+                                  .where(Attendance.badgeNumber == student_record.badgeNumber)
+                                  .where(Attendance.checkinDateTime >=  next_promotion_record.last_stripe_promotion_date)
+                                  )
+    next_promotion_record.attendance_count_since_stripe = db_session.scalar(attendance_since_stripe_stmt)
 
     return next_promotion_record
 

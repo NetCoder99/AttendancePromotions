@@ -19,18 +19,24 @@
                 <td>{{promotion_record.beltTitle}}</td>
                 <td>{{promotion_record.stripeTitle}}</td>
                 <td>{{promotion_record.promotionType}}</td>
-                <td><input type="date" id="promotion-date-inp-{{promotion_record.promotionId}}" value={{promotion_record.promotionDate}} ></td>
+                <td>{% include 'controls/input_promotion_history_date.html' %}
+                </td>
                 <td>
+                    <input type="hidden" id="hdn_promotion_id-{{promotion_record.promotionId}}" name="hdn_promotion_id" value="{{promotion_record.promotionId}}">
                     <button type  = "button"
-                            id    = "save-{{promotion_record.promotionId}}"
+                            id    = "btn-save-history-{{promotion_record.promotionId}}"
                             class = "btn btn-sm btn-success"
-                            onclick = "savePromotionDate({{promotion_record.promotionId}})">
+                            hx-get="/save_promotion_date_htmx"
+                            hx-trigger="click"
+                            hx-include="closest tr"
+                            hx-target="#lblPromotionSaveResponse">
                         Save
                     </button>
                     <button type  = "button"
                             id    = "del-{{promotion_record.promotionId}}"
                             class = "btn btn-sm btn-success"
-                            onclick = "delPromotionRecord({{promotion_record.promotionId}})">
+                            onclick = "delPromotionRecord({{promotion_record.promotionId}})"
+                            disabled>
                         Delete
                     </button>
 

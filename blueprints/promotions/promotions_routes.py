@@ -1,3 +1,5 @@
+from time import sleep
+
 from flask import Blueprint, render_template, request, jsonify, Request
 from flask_htmx import make_response
 from sqlalchemy import select, or_, func
@@ -9,7 +11,6 @@ from blueprints.promotions.promotions_procs import BuildStudentDetailsHtml, Buil
     BuildPromotionsInputHtml, BuildPromotionsHistoryHtml, IsDuplicatePromotion, UpdStudentPromotionRecords
 from blueprints.promotions.queries import GetPromotionHistoryStmt, GetStripeNamesByRank, DeleteStudentPromotionStmt
 from models import Students, Belts, Stripes, Requirements, Attendance, Promotions
-from sqlite.sqlite_alchemy import getAlchemySession, listDbSessions
 from sqlite.sqlite_manager import sqlite_manager
 from sqlite.sqlite_procs import GetDataNoArgs, GetDataWithArgs
 
@@ -20,7 +21,6 @@ promotions_bp = Blueprint(
     static_url_path = '/promotions_bp_static'
 )
 
-# db_session = getAlchemySession()
 db_session = sqlite_manager().session
 
 @promotions_bp.route('/promotions')
@@ -50,6 +50,7 @@ def student_search_by_name():
         # search had at least one space, check for badge number
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         badge_number = name_search.split()[0]
+        #sleep(1)
         student_details_response = make_response(BuildStudentPromotionsScreen(badge_number))
         return student_details_response
 
@@ -72,6 +73,27 @@ def get_promotion_history():
     return promotionHistory
 
 # --------------------------------------------------------------------
+@promotions_bp.route('/save_promotion_date_htmx', methods=['GET', 'POST'])
+def save_promotion_date_htmx():
+    try:
+        promotion_id           = request.args['hdn_promotion_id']
+        new_promotion_date     = request.args[f'promotion-date-inp-{promotion_id}']
+        new_promotion_date_str = parse(new_promotion_date, fuzzy=False).strftime(constants.fmtDateTime)
+
+        promotion_record_stmt = select(Promotions).where(Promotions.promotionId == promotion_id)
+        promotion_record      = db_session.scalars(promotion_record_stmt).first()
+        promotion_record.promotionDate  = new_promotion_date_str
+        promotion_record.updateDateTime = datetime.now().strftime(constants.fmtDateTime)
+        db_session.commit()
+
+        return_message = "Promotion date was updated!"
+        response = make_response(return_message)
+        response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
+        return response
+    except Exception as ex:
+        print(f'{str(ex)}')
+        return {'status': 'error', 'message' : str(ex) }
+
 @promotions_bp.route('/del_promotion_record', methods=['GET', 'POST'])
 def del_promotion_record():
     try:

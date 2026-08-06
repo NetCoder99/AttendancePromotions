@@ -17,5 +17,17 @@
 <datalist id="students">
     <!-- Dynamic options appear here -->
 </datalist>
+    <button id="btn_refresh_student_promotions"
+            type="button"
+            class="btn btn-link"
+            style="width: 5rem;"
+            hx-get="/student_search_by_name"
+            hx-trigger="click"
+            hx-target="#students"
+            hx-swap="innerHTML"
+            hx-include="#name_search"
+            hx-disabled-elt="#btnPromotionSave, #name_search"
+
+    >Refresh</button>
 <hr class="m-2 w-75">
 </div>
