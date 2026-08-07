@@ -22,8 +22,10 @@ Promotion management functions
                 <div class="col-sm-12 pt-3">
                     <form id="frmStudentPromotions">
                         {% include 'partials/student_details.html' %}
-                        {% include 'partials/attendance_counts.html' %}
                         {% include 'partials/student_promotions.html' %}
+                        {% include 'partials/attendance_counts.html' %}
+                        {% include 'partials/required_counts.html' %}
+                        {% include 'partials/promotion_message.html' %}
                         <div class="row w-100 mt-3">
                             <button id="btnPromotionSave"
                                     name="btnPromotionSave"

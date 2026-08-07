@@ -4,37 +4,36 @@
     <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
         <label class="form-label ms-1 mb-0 fw-bold">Total classes attended:</label>
         <input
-                id="inpTotalAttended"
-                name="inpTotalAttended"
+                id="inpTotalClassesAttended"
+                name="inpTotalClassesAttended"
                 type="text"
                 class="form-control"
-                readonly
-                value="{{total_classes_attended}}"
+                disabled
+                value="{{total_attendance_count}}"
         >
     </div>
 
     <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
-        <label class="form-label ms-1 mb-0 fw-bold">Required from last:</label>
+        <label class="form-label ms-1 mb-0 fw-bold">Classes since belt:</label>
         <input
-                id="inpClassesRequired"
-                name="inpClassesRequired"
+                id="inpBeltClassesAttended"
+                name="inpBeltClassesAttended"
                 type="text"
                 class="form-control"
-                readonly
-                value="{{required_promotion_count}}"
+                disabled
+                value="{{belt_attendance_count}}"
         >
     </div>
 
     <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
-        <label class="form-label ms-1 mb-0 fw-bold">Required total:</label>
+        <label class="form-label ms-1 mb-0 fw-bold">Classes since stripe:</label>
         <input
-                id="inpTotalClassesRequired"
-                name="inpTotalClassesRequired"
+                id="inpStripeClassesAttended"
+                name="inpStripeClassesAttended"
                 type="number"
                 class="form-control"
-                value="{{required_total_count}}"
+                value="{{stripe_attendance_count}}"
                 disabled
-
         >
     </div>
 </div>

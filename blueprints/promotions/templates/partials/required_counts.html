@@ -1,0 +1,39 @@
+<div id="div_required_counts" class="row w-100 mt-2" hx-swap-oob="true" >
+    <h5 class="fw-bold mt-3 justify-start" style="width: 15rem;">Required Counts:</h5>
+
+    <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
+        <label class="form-label ms-1 mb-0 fw-bold">Required from total:</label>
+        <input
+                id="inpTotalClassesRequired"
+                name="inpTotalClassesRequired"
+                type="text"
+                class="form-control"
+                disabled
+                value="{{total_classes_required}}"
+        >
+    </div>
+
+    <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
+        <label class="form-label ms-1 mb-0 fw-bold">Required from belt:</label>
+        <input
+                id="inpBeltClassesRequired"
+                name="inpBeltClassesRequired"
+                type="text"
+                class="form-control"
+                disabled
+                value="{{belt_classes_required}}"
+        >
+    </div>
+
+    <div class="d-inline-block text-start ms-1" style="width: 12rem;" >
+        <label class="form-label ms-1 mb-0 fw-bold">Required from stripe:</label>
+        <input
+                id="inpStripeClassesRequired"
+                name="inpStripeClassesRequired"
+                type="number"
+                class="form-control"
+                value="{{stripe_classes_required}}"
+                disabled
+        >
+    </div>
+</div>

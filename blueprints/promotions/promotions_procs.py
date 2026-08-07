@@ -28,26 +28,35 @@ def BuildStudentDetailsHtml(student_record: Students):
                                             student_stripe=student_record.currentStripeName)
     return student_details_html
 
-def BuildAttendanceDetailsHtml(student_record: Students):
+def BuildAttendanceDetailsHtml(student_record: Students, next_promotion_record: NextPromotion):
     try:
         CheckStudentRank(student_record)
-
-        stripe_id              = student_record.currentStripeId
-        requirement_list_stmt  = select(Requirements).where(Requirements.stripeId == stripe_id)
-        requirement_record     = db_session.scalars(requirement_list_stmt).all()[0]
-        total_classes_attended = db_session.scalar(select(func.count()).select_from(Attendance).where(Attendance.badgeNumber == student_record.badgeNumber))
         requirements_counts    = render_template(
             "partials/attendance_counts.html",
-            total_classes_attended    = total_classes_attended,
-            required_promotion_count = requirement_record.classesCount,
-            required_total_count = requirement_record.requiredClasses
+            total_attendance_count  = next_promotion_record.attendance_count_total,
+            belt_attendance_count   = next_promotion_record.attendance_count_since_belt,
+            stripe_attendance_count = next_promotion_record.attendance_count_since_stripe
         )
         return requirements_counts
     except Exception as ex:
         print(f'Error: {str(ex)}')
         raise ex
 
-def BuildPromotionsInputHtml(student_record: Students):
+def BuildRequiredClassesHtml(student_record: Students, next_promotion_record: NextPromotion):
+    try:
+        CheckStudentRank(student_record)
+        requirements_counts    = render_template(
+            "partials/required_counts.html",
+            total_classes_required  = next_promotion_record.classes_until_from_total,
+            belt_classes_required   = next_promotion_record.classes_until_from_belt,
+            stripe_classes_required = next_promotion_record.classes_until_from_stripe
+        )
+        return requirements_counts
+    except Exception as ex:
+        print(f'Error: {str(ex)}')
+        raise ex
+
+def BuildPromotionsInputHtml(student_record: Students, next_promotion_record: NextPromotion):
     try:
         if not student_record.currentRankNum:
             requirement_record = (db_session
@@ -59,8 +68,6 @@ def BuildPromotionsInputHtml(student_record: Students):
             student_record.currentRankName = requirement_record.beltTitle
             student_record.currentStripeId = requirement_record.stripeId
             student_record.currentStripeName = requirement_record.stripeTitle
-
-        next_promotion_record = GetNextPromotionDetails(student_record)
 
         belts_records         = db_session.scalars(select(Belts)).all()
         current_requirement_record = (
@@ -104,6 +111,9 @@ def BuildPromotionsHistoryHtml(student_record: Students):
     promotion_history     = render_template('partials/promotion_history.html',
                                             promotions_list=promotion_list)
     return promotion_history
+
+def BuildPromotionsMessageHtml(promotion_message: str):
+    return render_template('partials/promotion_message.html', promotion_message=promotion_message)
 
 # -----------------------------------------------------------------------------------
 # during development the student rank/stripe is not reliably set
@@ -283,6 +293,27 @@ def GetNextPromotionDetails(student_record: Students):
                                   )
     next_promotion_record.attendance_count_since_stripe = db_session.scalar(attendance_since_stripe_stmt)
 
+    next_promotion_record.classes_until_from_total  = next_requirement_record.requiredClasses - next_promotion_record.attendance_count_total
+    next_promotion_record.classes_until_from_belt   = next_requirement_record.classesCount    - next_promotion_record.attendance_count_since_belt
+    next_promotion_record.classes_until_from_stripe = next_requirement_record.classesCount    - next_promotion_record.attendance_count_since_stripe
+
+    count_values = [
+        next_promotion_record.classes_until_from_total,
+        next_promotion_record.classes_until_from_belt,
+        next_promotion_record.classes_until_from_stripe
+    ]
+    # result = min(x for x in count_values if x >= 0)
+    result = min(count_values)
+
+
+    if result > 0:
+        promotion_message = f'{result} classes until eligible for {next_requirement_record.beltTitle} with {next_requirement_record.stripeTitle}'
+    else:
+        promotion_message = f'You are eligible for {next_requirement_record.beltTitle} with {next_requirement_record.stripeTitle}'
+
+
+
+    next_promotion_record.promotion_message = promotion_message
     return next_promotion_record
 
 def GetLastBeltPromotionDate(student_record: Students):

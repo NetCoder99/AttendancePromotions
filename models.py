@@ -214,4 +214,8 @@ class NextPromotion:
     classes_remaining_from_base   : int
     classes_remaining_from_belt   : int
     classes_remaining_from_stripe : int
+    classes_until_from_total      : int
+    classes_until_from_belt       : int
+    classes_until_from_stripe     : int
+    promotion_message             : str
 

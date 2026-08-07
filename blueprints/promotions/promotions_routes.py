@@ -8,7 +8,8 @@ from datetime import date, datetime
 
 import constants
 from blueprints.promotions.promotions_procs import BuildStudentDetailsHtml, BuildAttendanceDetailsHtml, \
-    BuildPromotionsInputHtml, BuildPromotionsHistoryHtml, IsDuplicatePromotion, UpdStudentPromotionRecords
+    BuildPromotionsInputHtml, BuildPromotionsHistoryHtml, IsDuplicatePromotion, UpdStudentPromotionRecords, \
+    BuildRequiredClassesHtml, GetNextPromotionDetails, BuildPromotionsMessageHtml
 from blueprints.promotions.queries import GetPromotionHistoryStmt, GetStripeNamesByRank, DeleteStudentPromotionStmt
 from models import Students, Belts, Stripes, Requirements, Attendance, Promotions
 from sqlite.sqlite_manager import sqlite_manager
@@ -125,7 +126,8 @@ def get_stripes_htmx():
     stripe_records          = db_session.scalars(stripe_list_stmt).all()
     input_select_stripes    = render_template('controls/input_select_stripes.html', stripe_records=stripe_records)
     student_record.currentStripeId = stripe_records[0].stripeId
-    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record)
+    next_promotion_record   = GetNextPromotionDetails(student_record)
+    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record, next_promotion_record)
 
     return input_select_stripes + attendance_counts_html # render_template('controls/input_select_stripes.html', stripe_records=stripe_records)
 
@@ -135,7 +137,8 @@ def upd_requirements_htmx():
     print(f'Current route: upd_requirements_htmx')
     student_list_stmt       = select(Students).where(Students.badgeNumber == request.args['hdnBadgeNumber'])
     student_record          = db_session.scalars(student_list_stmt).first()
-    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record)
+    next_promotion_record   = GetNextPromotionDetails(student_record)
+    attendance_counts_html  = BuildAttendanceDetailsHtml (student_record, next_promotion_record)
     return attendance_counts_html
 
 # --------------------------------------------------------------------
@@ -175,11 +178,25 @@ def upd_student_rank_htmx():
 
 
 def BuildStudentPromotionsScreen(badge_number):
-    print(f'  generating details from badge number: {badge_number}')
-    student_list_stmt = select(Students).where(Students.badgeNumber == badge_number)
-    student_record = db_session.scalars(student_list_stmt).all()[0]
-    student_details_html = BuildStudentDetailsHtml(student_record)
-    attendance_counts_html = BuildAttendanceDetailsHtml(student_record)
-    student_promotion_html = BuildPromotionsInputHtml(student_record)
-    promotion_history_html = BuildPromotionsHistoryHtml(student_record)
-    return student_details_html + attendance_counts_html + student_promotion_html + promotion_history_html
+    try:
+        print(f'  generating details from badge number: {badge_number}')
+        student_list_stmt = select(Students).where(Students.badgeNumber == badge_number)
+        student_record = db_session.scalars(student_list_stmt).all()[0]
+
+        next_promotion_record  = GetNextPromotionDetails(student_record)
+
+        student_details_html   = BuildStudentDetailsHtml(student_record)
+        attendance_counts_html = BuildAttendanceDetailsHtml(student_record, next_promotion_record)
+        required_counts_html   = BuildRequiredClassesHtml(student_record, next_promotion_record)
+        student_promotion_html = BuildPromotionsInputHtml(student_record, next_promotion_record)
+        promotion_history_html = BuildPromotionsHistoryHtml(student_record)
+        promotion_message_html = BuildPromotionsMessageHtml(next_promotion_record.promotion_message)
+        return (student_details_html +
+                attendance_counts_html +
+                student_promotion_html +
+                promotion_history_html +
+                required_counts_html +
+                promotion_message_html)
+    except Exception as ex:
+        print(f'Error: {str(ex)}')
+        return {'status': 'error', 'message': str(ex)}
