@@ -211,6 +211,7 @@ class NextPromotion:
     attendance_count_total        : int
     attendance_count_since_belt   : int
     attendance_count_since_stripe : int
+    attendance_count_since_last   : int
     classes_remaining_from_base   : int
     classes_remaining_from_belt   : int
     classes_remaining_from_stripe : int

@@ -132,6 +132,7 @@ def CheckStudentRank(student_record: Students):
                 student_record.currentRankName    = promotion_record.beltTitle
                 student_record.currentStripeId    = promotion_record.stripeId
                 student_record.currentStripeName  = promotion_record.stripeTitle
+                student_record.studentPromotionDate = promotion_record.promotionDate
             else:
                 requirement_record = (db_session
                                   .scalars(select(Requirements)
@@ -142,6 +143,7 @@ def CheckStudentRank(student_record: Students):
                 student_record.currentRankName    = requirement_record.beltTitle
                 student_record.currentStripeId    = requirement_record.stripeId
                 student_record.currentStripeName  = requirement_record.stripeTitle
+                student_record.studentPromotionDate = datetime.now().strftime(constants.fmtDateTime)
         elif not student_record.currentRankNum and student_record.currentStripeId:
             # get and set the belt/rank for the related stripe
             requirement_record_stmt = (
@@ -161,6 +163,9 @@ def CheckStudentRank(student_record: Students):
             requirement_record = db_session.scalars(requirement_record_stmt).first()
             student_record.currentStripeId = requirement_record.stripeId
             student_record.currentStripeName = requirement_record.stripeTitle
+
+        if not student_record.studentPromotionDate:
+            student_record.studentPromotionDate = datetime.now().strftime(constants.fmtDateTime)
 
         # print(f'CheckStudentRank :: Session state before: {db_session.is_modified(student_record)}')
         if db_session.is_modified(student_record):
@@ -241,80 +246,111 @@ def UpdStudentPromotionRecords(
         raise ex
 
 def GetNextPromotionDetails(student_record: Students):
-    next_promotion_record = NextPromotion()
+    try:
+        next_promotion_record = NextPromotion()
 
-    # belts are static, same list every time
-    next_promotion_record.belt_records = db_session.scalars(select(Belts)).all()
+        # new students don't always have a rank, check for that
+        CheckStudentRank(student_record)
 
-    # fetch the requirement record for the current student rank
-    current_requirement_record = (
-        db_session.scalars(select(Requirements).where(Requirements.stripeId == student_record.currentStripeId))
-        .first()
-    )
-    next_promotion_record.current_requirement_record = current_requirement_record
+        # belts are static, same list every time
+        next_promotion_record.belt_records = db_session.scalars(select(Belts)).all()
 
-    # get requirement record for the next promotion,
-    next_requirement_stmt = (select(Requirements)
-                             .where(Requirements.requirementId > current_requirement_record.requirementId)
-                             )
-    next_requirement_record = (db_session.scalars(next_requirement_stmt).first())
-    next_promotion_record.next_requirement_record = next_requirement_record
+        # fetch the requirement record for the current student rank
+        current_requirement_record = (
+            db_session.scalars(select(Requirements).where(Requirements.stripeId == student_record.currentStripeId))
+            .first()
+        )
+        next_promotion_record.current_requirement_record = current_requirement_record
 
-    # stripe records are dependent on the next requirement
-    stripe_records = (db_session
-                      .scalars(select(Requirements)
-                               .where(Requirements.beltId == next_requirement_record.beltId)
-                               .order_by(Requirements.stripeSeqNum))
-                      .all())
-    next_promotion_record.stripe_records = stripe_records
+        # get requirement record for the next promotion,
+        next_requirement_stmt = (select(Requirements)
+                                 .where(Requirements.requirementId > current_requirement_record.requirementId)
+                                 )
+        next_requirement_record = (db_session.scalars(next_requirement_stmt).first())
+        next_promotion_record.next_requirement_record = next_requirement_record
 
-    # get the latest promotion dates
-    next_promotion_record.last_belt_promotion_date    = GetLastBeltPromotionDate(student_record)
-    next_promotion_record.last_stripe_promotion_date  = GetLastStripePromotionDate(student_record)
+        # stripe records are dependent on the next requirement
+        stripe_records = (db_session
+                          .scalars(select(Requirements)
+                                   .where(Requirements.beltId == next_requirement_record.beltId)
+                                   .order_by(Requirements.stripeSeqNum))
+                          .all())
+        next_promotion_record.stripe_records = stripe_records
 
-    # populate the attendance counts
-    attendance_total_stmt = (select(func.count())
-                             .select_from(Attendance)
-                             .where(Attendance.badgeNumber == student_record.badgeNumber))
-    next_promotion_record.attendance_count_total = db_session.scalar(attendance_total_stmt)
-
-    attendance_since_belt_stmt = (select(func.count())
-                                  .select_from(Attendance)
-                                  .where(Attendance.badgeNumber == student_record.badgeNumber)
-                                  .where(Attendance.checkinDateTime >=  next_promotion_record.last_belt_promotion_date)
-                                  )
-    #print(f'attendance_since_belt_stmt\n{attendance_since_belt_stmt.compile(compile_kwargs={"literal_binds": True})}')
-    next_promotion_record.attendance_count_since_belt = db_session.scalar(attendance_since_belt_stmt)
-
-    attendance_since_stripe_stmt = (select(func.count())
-                                  .select_from(Attendance)
-                                  .where(Attendance.badgeNumber == student_record.badgeNumber)
-                                  .where(Attendance.checkinDateTime >=  next_promotion_record.last_stripe_promotion_date)
-                                  )
-    next_promotion_record.attendance_count_since_stripe = db_session.scalar(attendance_since_stripe_stmt)
-
-    next_promotion_record.classes_until_from_total  = next_requirement_record.requiredClasses - next_promotion_record.attendance_count_total
-    next_promotion_record.classes_until_from_belt   = next_requirement_record.classesCount    - next_promotion_record.attendance_count_since_belt
-    next_promotion_record.classes_until_from_stripe = next_requirement_record.classesCount    - next_promotion_record.attendance_count_since_stripe
-
-    count_values = [
-        next_promotion_record.classes_until_from_total,
-        next_promotion_record.classes_until_from_belt,
-        next_promotion_record.classes_until_from_stripe
-    ]
-    # result = min(x for x in count_values if x >= 0)
-    result = min(count_values)
+        # get the latest promotion dates
+        next_promotion_record.last_belt_promotion_date    = GetLastBeltPromotionDate(student_record)
+        next_promotion_record.last_stripe_promotion_date  = GetLastStripePromotionDate(student_record)
 
 
-    if result > 0:
-        promotion_message = f'{result} classes until eligible for {next_requirement_record.beltTitle} with {next_requirement_record.stripeTitle}'
-    else:
-        promotion_message = f'You are eligible for {next_requirement_record.beltTitle} with {next_requirement_record.stripeTitle}'
+        # populate the attendance counts
+        attendance_total_stmt = (select(func.count())
+                                 .select_from(Attendance)
+                                 .where(Attendance.badgeNumber == student_record.badgeNumber))
+        next_promotion_record.attendance_count_total = db_session.scalar(attendance_total_stmt)
+
+        attendance_since_belt_stmt = (select(func.count())
+                                      .select_from(Attendance)
+                                      .where(Attendance.badgeNumber == student_record.badgeNumber)
+                                      .where(Attendance.checkinDateTime >=  next_promotion_record.last_belt_promotion_date)
+                                      )
+        #print(f'attendance_since_belt_stmt\n{attendance_since_belt_stmt.compile(compile_kwargs={"literal_binds": True})}')
+        next_promotion_record.attendance_count_since_belt = db_session.scalar(attendance_since_belt_stmt)
+
+        attendance_since_stripe_stmt = (select(func.count())
+                                      .select_from(Attendance)
+                                      .where(Attendance.badgeNumber == student_record.badgeNumber)
+                                      .where(Attendance.checkinDateTime >=  next_promotion_record.last_stripe_promotion_date)
+                                      )
+        next_promotion_record.attendance_count_since_stripe = db_session.scalar(attendance_since_stripe_stmt)
+
+        next_promotion_record.classes_until_from_total  = next_requirement_record.requiredClasses - next_promotion_record.attendance_count_total
+        next_promotion_record.classes_until_from_belt   = next_requirement_record.classesCount    - next_promotion_record.attendance_count_since_belt
+        next_promotion_record.classes_until_from_stripe = next_requirement_record.classesCount    - next_promotion_record.attendance_count_since_stripe
+
+        count_values = [
+            next_promotion_record.classes_until_from_total,
+            next_promotion_record.classes_until_from_belt,
+            next_promotion_record.classes_until_from_stripe
+        ]
+        result = min(x for x in count_values if x >= 0)
+        # result = min(count_values)
+
+        # only the last promotion date counts towards the next promotion
+        last_promotion_record = (
+            db_session.scalars(select(Promotions)
+                               .where(Promotions.badgeNumber == student_record.badgeNumber)
+                               .order_by(Promotions.promotionDate.desc()))
+            .first()
+        )
+
+
+        if not last_promotion_record:
+            last_promotion_date = student_record.createDateTime
+        else:
+            last_promotion_date = student_record.studentPromotionDate
+        attendance_since_last_stmt = (select(func.count())
+                                      .select_from(Attendance)
+                                      .where(Attendance.badgeNumber == student_record.badgeNumber)
+                                      .where(Attendance.checkinDateTime >= last_promotion_date)
+                                      )
+        attendance_since_last_count = db_session.scalar(attendance_since_last_stmt)
+
+
+        result = next_requirement_record.classesCount - attendance_since_last_count
+        #if next_requirement_record.classesCount >
+
+        if result > 0:
+            promotion_message = f'{result} classes until eligible for {next_requirement_record.beltTitle} with {next_requirement_record.stripeTitle}'
+        else:
+            promotion_message = f'You are eligible for {next_requirement_record.beltTitle} with {next_requirement_record.stripeTitle}'
 
 
 
-    next_promotion_record.promotion_message = promotion_message
-    return next_promotion_record
+        next_promotion_record.promotion_message = promotion_message
+        return next_promotion_record
+    except Exception as ex:
+        print(f'Error: {str(ex)}')
+        raise ex
 
 def GetLastBeltPromotionDate(student_record: Students):
     last_promotion_stmt = ((select(Promotions)

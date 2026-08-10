@@ -87,6 +87,18 @@ def save_promotion_date_htmx():
         promotion_record.updateDateTime = datetime.now().strftime(constants.fmtDateTime)
         db_session.commit()
 
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        last_promotion_record_stmt = (select(Promotions)
+                                      .where(Promotions.badgeNumber == promotion_record.badgeNumber)
+                                      .order_by(Promotions.promotionDate.desc())
+                                      )
+        last_promotion_record = db_session.scalars(last_promotion_record_stmt).first()
+        if last_promotion_record.promotionId == promotion_record.promotionId:
+            student_list_stmt = select(Students).where(Students.badgeNumber == promotion_record.badgeNumber)
+            student_record = db_session.scalars(student_list_stmt).first()
+            student_record.studentPromotionDate = promotion_record.promotionDate
+            db_session.commit()
+
         return_message = "Promotion date was updated!"
         response = make_response(return_message)
         response.headers["HX-Trigger"] = '{"resetResponseLabel": "Saved successfully!"}'
@@ -199,4 +211,5 @@ def BuildStudentPromotionsScreen(badge_number):
                 promotion_message_html)
     except Exception as ex:
         print(f'Error: {str(ex)}')
-        return {'status': 'error', 'message': str(ex)}
+        raise ex
+        # return {'status': 'error', 'message': str(ex)}
