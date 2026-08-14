@@ -2,6 +2,7 @@ from flask import render_template
 #from flask_htmx import make_response
 from sqlalchemy import select, func
 from datetime import datetime
+import traceback
 
 #from blueprints.promotions.queries import GetNextPromotion
 from dateutil.parser import parse, ParserError
@@ -100,6 +101,7 @@ def BuildPromotionsInputHtml(student_record: Students, next_promotion_record: Ne
         return student_promotions
     except Exception as ex:
         print(f'Error: {str(ex)}')
+        traceback.print_exc()
         raise ex
 
 def BuildPromotionsHistoryHtml(student_record: Students):
@@ -349,6 +351,7 @@ def GetNextPromotionDetails(student_record: Students):
         next_promotion_record.promotion_message = promotion_message
         return next_promotion_record
     except Exception as ex:
+        traceback.print_exc()
         print(f'Error: {str(ex)}')
         raise ex
 
