@@ -1,14 +1,23 @@
+# ------------------------------------------------------------------
+# pyinstaller --add-data "templates;templates" --add-data "static;static" --add-data "blueprints/promotions;blueprints/promotions" AttendancePromotions.py
+# pyinstaller --add-data "templates:templates" --add-data "static:static" --add-data "blueprints/promotions:blueprints/promotions" AttendancePromotions.py
+# ------------------------------------------------------------------
+
 import os
 import sys
+from tkinter import messagebox
+
+import tkinter as tk
 from flask import Flask, render_template, request, jsonify, redirect, url_for, Blueprint
 from flask_htmx import HTMX
 from flaskwebgui import FlaskUI
 
 from sqlalchemy.orm import Session
 
+import constants
 from blueprints.promotions.promotions_routes import promotions_bp
+from services.processScanner import DisplayActiveProcesses, IsProcessActive
 from sqlite.sqlite_alchemy import getAlchemySession, listDbSessions
-from sqlite.sqlite_manager import sqlite_manager
 
 # ----------------------------------------------------------------------------------
 base_dir = '.'
@@ -18,18 +27,14 @@ if hasattr(sys, '_MEIPASS'):
 # ----------------------------------------------------------------------------------
 app = Flask(__name__, static_folder=os.path.join(base_dir, 'static'), template_folder=os.path.join(base_dir, 'templates'))
 app.register_blueprint(promotions_bp)
-# app.register_blueprint(schedule_bp)
-# app.register_blueprint(belts_bp)
-# app.register_blueprint(requirements_bp)
 
 htmx = HTMX(app)
 
-
-db_session = sqlite_manager()
 # ----------------------------------------------------------------------------------
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return redirect(url_for('promotions_bp.promotions_bp_home'))
+    #return render_template('index.html')
 
 # ----------------------------------------------------------------------------------
 @app.errorhandler(404)
@@ -54,10 +59,17 @@ def CheckDbConnection(db_name: str) -> Session:
     return temp_session
 
 if __name__ == '__main__':
-    app.run(debug=False, port=5021)
-    # CheckDbConnection('AttendanceV2.db')
-    # CheckDbConnection('AttendanceV3.db')
-    # CheckDbConnection('AttendanceRanks.db')
-    # print(f'--- connected databases ---')
-    # listDbSessions()
+    DisplayActiveProcesses('attendance')
+    ok_to_start = IsProcessActive(constants.applicationName)
+    if ok_to_start['status'] == 'ok':
+        ui = FlaskUI(app=app, width=1250, height=900, fullscreen=False, server='flask', port=5002)
+        ui.run()
+    else:
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("Attendance Promotions - Error", ok_to_start['message'])
+        print(ok_to_start['message'])
+    #app.run(debug=False,  port=5002)
+
+
 
